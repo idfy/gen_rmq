@@ -263,6 +263,23 @@ defmodule GenRMQ.Consumer do
   end
 
   @doc """
+  Cancels the consumer
+  `module` - callback module implementing `GenRMQ.Consumer` behaviour
+  `consumer_tag` - identifier for the consumer, valid within the current channel
+  """
+  @spec cancel(module :: module(), consumer_tag :: String.t()) :: {:ok, String.t()}
+  def cancel(module, consumer_tag) do
+    channel = get_channel(module)
+    Basic.cancel(channel, consumer_tag)
+  end
+
+  @spec get_channel(module :: module()) :: Channel.t()
+  defp get_channel(module) do
+    state = GenServer.call(module, {:get_genserver_state})
+    state.in
+  end
+
+  @doc """
   Requeues / rejects given message
 
   `message` - `GenRMQ.Message` struct
@@ -317,6 +334,12 @@ defmodule GenRMQ.Consumer do
   @impl GenServer
   def handle_call({:recover, requeue}, _from, %{in: channel} = state) do
     {:reply, Basic.recover(channel, requeue: requeue), state}
+  end
+
+  doc false
+  @impl GenServer
+  def handle_call({:get_genserver_state}, _from, state) do
+    {:reply, state, state}
   end
 
   @doc false
